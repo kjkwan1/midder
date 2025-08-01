@@ -65,7 +65,10 @@ Transform and process events with powerful middleware:
 ```typescript
 emitter.middleware('userLogin')
   .transform((data) => ({ ...data, processed: true }))
-  .filter((data) => data.userId.length > 0)
+  .filter((data) => {
+    console.log(data.processed);  // Type safe transformation
+    return data.userId.length > 0;
+  })
   .tap((data) => console.log('Processing:', data.userId))
   .log('User login processed');
 ```
