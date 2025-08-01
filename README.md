@@ -125,6 +125,8 @@ const userData = await emitter.once('userLogin', { signal: controller.signal });
 - `transform(handler)` - Transform event data
 - `filter(predicate)` - Filter events conditionally
 - `tap(handler)` - Execute side effects
+- `debounce(delayMs)` - Add debounce to events
+- `throttle(delayMs)` - Add throttle to events
 - `log(message?)` - Log events to console
 
 ## License
