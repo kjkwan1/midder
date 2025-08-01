@@ -1,4 +1,4 @@
-# Enhanced Event Emitter
+# Midder
 
 My take on EventEmitter that works in both browser and Node, with some enhancements
 
