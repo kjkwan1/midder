@@ -18,6 +18,21 @@ My take on EventEmitter that works in both browser and Node, with some enhanceme
 npm install midder
 ```
 
+## Building
+```bash
+npm run build
+```
+
+## Test
+```bash
+npm run test
+```
+
+## Example
+```bash
+npm run example
+```
+
 ## Quick Start
 
 ```typescript
@@ -53,6 +68,25 @@ emitter.middleware('userLogin')
   .filter((data) => data.userId.length > 0)
   .tap((data) => console.log('Processing:', data.userId))
   .log('User login processed');
+```
+
+## ID or reference based controls
+```typescript
+const emitter = new EventEmitter<EventMap>();
+const id = emitter.on('data', (data) => {
+    // ...
+});
+
+const callback = (data) => JSON.stringify(data);
+emitter.on('data', callback);
+
+// Targeted emissions based on ID (because why not)
+emitter.emitToListener('data', { hello: 'world!' }, id);
+
+// Both supported
+emitter.off('data', id);
+emitter.off('data', callback);
+
 ```
 
 ## Promise-based `once()`
