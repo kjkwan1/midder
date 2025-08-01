@@ -96,6 +96,54 @@ describe('EventEmitter - Middleware', () => {
         });
     });
 
+    describe('debounce middleware', () => {
+        test('should debounce event execution', () => {
+            jest.useFakeTimers();
+            const listener = jest.fn();
+
+            emitter.middleware('test')
+                .debounce(100);
+
+            emitter.on('test', listener);
+            emitter.emit('test', { value: 42 });
+            emitter.emit('test', { value: 43 });
+
+            expect(listener).not.toHaveBeenCalled();
+
+            jest.advanceTimersByTime(100);
+            expect(listener).toHaveBeenCalledWith({ value: 43 });
+
+            jest.useRealTimers();
+        });
+    });
+
+    describe('throttle middleware', () => {
+        test('should throttle event execution', () => {
+            jest.useFakeTimers();
+            const listener = jest.fn();
+
+            emitter.middleware('test')
+                .throttle(100);
+
+            emitter.on('test', listener);
+            
+            emitter.emit('test', { value: 1 });
+            expect(listener).toHaveBeenCalledTimes(1);
+            expect(listener).toHaveBeenCalledWith({ value: 1 });
+
+            emitter.emit('test', { value: 2 });
+            emitter.emit('test', { value: 3 });
+            expect(listener).toHaveBeenCalledTimes(1);
+
+            jest.advanceTimersByTime(100);
+            emitter.emit('test', { value: 4 });
+            expect(listener).toHaveBeenCalledTimes(2);
+            expect(listener).toHaveBeenCalledWith({ value: 4 });
+
+            jest.useRealTimers();
+        });
+    });
+
     describe('complex middleware chains', () => {
         test('should execute middleware in correct order', () => {
             const listener = jest.fn();

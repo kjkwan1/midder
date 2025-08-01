@@ -13,6 +13,10 @@ export class EventEmitter<Events extends EventMap = EventMap> {
     private listeners = new Map<keyof Events, Set<ListenerWithId<any>>>();
     private wildcardListeners: ListenerWithId<any>[] = [];
     private middlewareChains = new Map<keyof Events, MiddlewareChain<Events, any, any>>();
+    private debounceTimers = new Map<keyof Events, NodeJS.Timeout>();
+    private debounceDelays = new Map<keyof Events, number>();
+    private throttleTimers = new Map<keyof Events, number>();
+    private throttleDelays = new Map<keyof Events, number>();
     private idCounter = 0;
 
     constructor({ maxListeners = 10 }: EventEmitterOptions = {}) {
@@ -40,11 +44,11 @@ export class EventEmitter<Events extends EventMap = EventMap> {
         signal?: AbortSignal
     ): string {
         const id = `${this.idCounter++}`;
-        
+
         if (signal?.aborted) {
             return id;
         }
-        
+
         if (event === '*') {
             if (this.maxListeners > 0 && this.wildcardListeners.length >= this.maxListeners) {
                 console.warn(`Max listeners exceeded for wildcard event`);
@@ -83,7 +87,7 @@ export class EventEmitter<Events extends EventMap = EventMap> {
         return new Promise((resolve, reject) => {
             let id: string;
             let timeoutId: NodeJS.Timeout | number | undefined;
-            
+
             const cleanup = () => {
                 if (timeoutId) {
                     clearTimeout(timeoutId);
@@ -95,7 +99,7 @@ export class EventEmitter<Events extends EventMap = EventMap> {
                 cleanup();
                 resolve(data);
             };
-            
+
             id = this.on(event, wrappedListener);
 
             if (timeout && timeout > 0) {
@@ -104,7 +108,7 @@ export class EventEmitter<Events extends EventMap = EventMap> {
                     reject(new Error(`Timeout after ${timeout}ms`));
                 }, timeout);
             }
-            
+
             if (signal) {
                 signal.addEventListener('abort', () => {
                     cleanup();
@@ -163,6 +167,37 @@ export class EventEmitter<Events extends EventMap = EventMap> {
     }
 
     emit<K extends keyof Events>(event: K, data: EventData<Events, K>): boolean {
+        const debounceDelay = this.debounceDelays.get(event);
+        const throttleDelay = this.throttleDelays.get(event);
+
+        if (throttleDelay) {
+            const currentTime = Date.now();
+            const lastThrottleTime = this.throttleTimers.get(event);
+            if (lastThrottleTime && currentTime - lastThrottleTime < throttleDelay) {
+                return false;
+            }
+            this.throttleTimers.set(event, currentTime);
+        }
+
+        if (debounceDelay) {
+            const existingTimer = this.debounceTimers.get(event);
+            if (existingTimer) {
+                clearTimeout(existingTimer);
+            }
+
+            const newTimer = setTimeout(() => {
+                this.debounceTimers.delete(event);
+                this._emitInternal(event, data);
+            }, debounceDelay);
+
+            this.debounceTimers.set(event, newTimer);
+            return true;
+        }
+
+        return this._emitInternal(event, data);
+    }
+
+    private _emitInternal<K extends keyof Events>(event: K, data: EventData<Events, K>): boolean {
         let called = false;
         const listeners = this.listeners.get(event);
         const chain = this.middlewareChains.get(event);
@@ -233,7 +268,7 @@ export class EventEmitter<Events extends EventMap = EventMap> {
             return false;
         }
     }
-    
+
     listenerCount<K extends keyof Events>(event: K | '*'): number {
         if (event === '*') {
             return this.wildcardListeners.length;
@@ -244,17 +279,43 @@ export class EventEmitter<Events extends EventMap = EventMap> {
     removeAllListeners<K extends keyof Events>(event?: K): void {
         if (event) {
             this.listeners.delete(event);
+            const timer = this.debounceTimers.get(event);
+            if (timer) {
+                clearTimeout(timer);
+                this.debounceTimers.delete(event);
+            }
+            this.throttleTimers.delete(event);
         } else {
             this.listeners.clear();
             this.wildcardListeners = [];
+            for (const timer of this.debounceTimers.values()) {
+                clearTimeout(timer);
+            }
+            this.debounceTimers.clear();
+            this.throttleTimers.clear();
         }
     }
 
     removeAllMiddleware<K extends keyof Events>(event?: K): void {
         if (event) {
             this.middlewareChains.delete(event);
+            this.debounceDelays.delete(event);
+            this.throttleDelays.delete(event);
+            const timer = this.debounceTimers.get(event);
+            if (timer) {
+                clearTimeout(timer);
+                this.debounceTimers.delete(event);
+            }
+            this.throttleTimers.delete(event);
         } else {
             this.middlewareChains.clear();
+            this.debounceDelays.clear();
+            this.throttleDelays.clear();
+            for (const timer of this.debounceTimers.values()) {
+                clearTimeout(timer);
+            }
+            this.debounceTimers.clear();
+            this.throttleTimers.clear();
         }
     }
 
@@ -264,8 +325,18 @@ export class EventEmitter<Events extends EventMap = EventMap> {
             .filter((event) => (this.listeners.get(event)?.size || 0) > 0);
     }
 
-    setMiddleware<K extends keyof Events>(event: K, chain: MiddlewareChain<Events, K, any>): void {
-        this.middlewareChains.set(event, chain);
+    removeDebounce<K extends keyof Events>(event: K): void {
+        this.debounceDelays.delete(event);
+        const timer = this.debounceTimers.get(event);
+        if (timer) {
+            clearTimeout(timer);
+            this.debounceTimers.delete(event);
+        }
+    }
+
+    removeThrottle<K extends keyof Events>(event: K): void {
+        this.throttleDelays.delete(event);
+        this.throttleTimers.delete(event);
     }
 
     getMiddleware<K extends keyof Events>(event: K): MiddlewareChain<Events, K, any> | undefined {
@@ -282,5 +353,20 @@ export class EventEmitter<Events extends EventMap = EventMap> {
         }
         this.maxListeners = n;
         return this;
+    }
+
+    /** @internal - Used by middleware system, not intended for direct use */
+    _setMiddleware<K extends keyof Events>(event: K, chain: MiddlewareChain<Events, K, any>): void {
+        this.middlewareChains.set(event, chain);
+    }
+
+    /** @internal - Used by middleware system, not intended for direct use */
+    _setDebounce<K extends keyof Events>(event: K, delayMs: number): void {
+        this.debounceDelays.set(event, delayMs);
+    }
+
+    /** @internal - Used by middleware system, not intended for direct use */
+    _setThrottle<K extends keyof Events>(event: K, delayMs: number): void {
+        this.throttleDelays.set(event, delayMs);
     }
 }

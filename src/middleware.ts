@@ -7,9 +7,10 @@ interface MiddlewareStep<T, R = T> {
 }
 
 export class MiddlewareChain<T extends EventMap, K extends keyof T, CurrentType = EventData<T, K>> {
+
     constructor(
         private eventType: K,
-        private steps: MiddlewareStep<any, any>[] = []
+        private steps: MiddlewareStep<any, any>[] = [],
     ) { }
 
     transform<R>(handler: (data: CurrentType) => R): MiddlewareChain<T, K, R> {
@@ -79,6 +80,7 @@ export class MiddlewareChain<T extends EventMap, K extends keyof T, CurrentType 
 }
 
 export class MiddlewareBuilder<Events extends EventMap, K extends keyof Events, CurrentType> {
+
     constructor(
         private emitter: EventEmitter<Events>,
         private event: K,
@@ -88,28 +90,38 @@ export class MiddlewareBuilder<Events extends EventMap, K extends keyof Events, 
     transform<R>(handler: (data: CurrentType) => R): MiddlewareBuilder<Events, K, R> {
         const currentChain = this.emitter.getMiddleware(this.event) || this.chain;
         const newChain = currentChain.transform(handler);
-        this.emitter.setMiddleware(this.event, newChain);
+        this.emitter._setMiddleware(this.event, newChain);
         return new MiddlewareBuilder<Events, K, R>(this.emitter, this.event, newChain);
     }
 
     filter(handler: (data: CurrentType) => boolean): MiddlewareBuilder<Events, K, CurrentType> {
         const currentChain = this.emitter.getMiddleware(this.event) || this.chain;
         const newChain = currentChain.filter(handler);
-        this.emitter.setMiddleware(this.event, newChain);
+        this.emitter._setMiddleware(this.event, newChain);
         return new MiddlewareBuilder<Events, K, CurrentType>(this.emitter, this.event, newChain);
     }
 
     tap(handler: (data: CurrentType) => void): MiddlewareBuilder<Events, K, CurrentType> {
         const currentChain = this.emitter.getMiddleware(this.event) || this.chain;
         const newChain = currentChain.tap(handler);
-        this.emitter.setMiddleware(this.event, newChain);
+        this.emitter._setMiddleware(this.event, newChain);
         return new MiddlewareBuilder<Events, K, CurrentType>(this.emitter, this.event, newChain);
+    }
+
+    debounce(delayMs: number): MiddlewareBuilder<Events, K, CurrentType> {
+        this.emitter._setDebounce(this.event, delayMs);
+        return this;
+    }
+
+    throttle(delayMs: number): MiddlewareBuilder<Events, K, CurrentType> {
+        this.emitter._setThrottle(this.event, delayMs);
+        return this;
     }
 
     log(message?: string): MiddlewareBuilder<Events, K, CurrentType> {
         const currentChain = this.emitter.getMiddleware(this.event) || this.chain;
         const newChain = currentChain.log(message);
-        this.emitter.setMiddleware(this.event, newChain);
+        this.emitter._setMiddleware(this.event, newChain);
         return new MiddlewareBuilder<Events, K, CurrentType>(this.emitter, this.event, newChain);
     }
 }
