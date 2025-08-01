@@ -1,0 +1,95 @@
+# Enhanced Event Emitter
+
+My take on EventEmitter that works in both browser and Node, with some enhancements
+
+## Features
+
+- **Type-Safe**: Full TypeScript support with strongly typed events
+- **Middleware System**: Transform, filter, and tap into events with simple API
+- **Universal**: Works in both Node.js and browsers
+- **Targeted Emission**: Emit to specific listeners
+- **Promise Support**: Await on once(), because it's annoying to do otherwise
+- **AbortSignal**: Cancel listeners with standard web APIs
+- **Wildcard Events**: Listen to all events with `*`
+
+## Installation
+
+```bash
+npm install midder
+```
+
+## Quick Start
+
+```typescript
+import { EventEmitter } from 'midder';
+
+// Define your event types
+interface MyEvents {
+  userLogin: { userId: string; timestamp: number };
+  dataUpdate: { id: string; value: any };
+}
+
+const emitter = new EventEmitter<MyEvents>();
+
+// Add listeners
+const listenerId = emitter.on('userLogin', (data) => {
+  console.log(`User ${data.userId} logged in at ${data.timestamp}`);
+});
+
+// Emit events
+emitter.emit('userLogin', {
+  userId: 'user123',
+  timestamp: Date.now()
+});
+```
+
+## Middleware System
+
+Transform and process events with powerful middleware:
+
+```typescript
+emitter.middleware('userLogin')
+  .transform((data) => ({ ...data, processed: true }))
+  .filter((data) => data.userId.length > 0)
+  .tap((data) => console.log('Processing:', data.userId))
+  .log('User login processed');
+```
+
+## Promise-based `once()`
+
+```typescript
+// Wait for next event
+const userData = await emitter.once('userLogin');
+
+// With timeout
+const userData = await emitter.once('userLogin', { timeout: 5000 });
+
+// With AbortSignal
+const controller = new AbortController();
+const userData = await emitter.once('userLogin', { signal: controller.signal });
+```
+
+## API Reference
+
+### EventEmitter Methods
+
+- `on(event, listener, signal?)` - Add event listener
+- `off(event, idOrHandler)` - Remove event listener
+- `once(event, options?)` - Promise-based single-use listener
+- `emit(event, data)` - Emit event to all listeners
+- `emitToListener(event, data, listenerId)` - Emit to specific listener
+- `middleware(event)` - Get middleware builder for event
+- `listenerCount(event)` - Get number of listeners
+- `removeAllListeners(event?)` - Remove all listeners
+- `eventNames()` - Get list of events with listeners
+
+### Middleware Methods
+
+- `transform(handler)` - Transform event data
+- `filter(predicate)` - Filter events conditionally
+- `tap(handler)` - Execute side effects
+- `log(message?)` - Log events to console
+
+## License
+
+MIT © [kjkwan1]

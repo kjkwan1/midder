@@ -1,0 +1,63 @@
+{
+  "name": "midder",
+  "version": "0.1.0",
+  "description": "My take on Event Emitters based on pain points I found with the base implementation in Node.js and the browser.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "type-check": "tsc --noEmit",
+    "clean": "rimraf dist",
+    "prebuild": "npm run clean",
+    "prepack": "npm run build",
+    "dev": "ts-node src/example-usage.ts",
+    "example": "ts-node src/example-usage.ts"
+  },
+  "keywords": [
+    "eventemitter",
+    "events",
+    "typescript",
+    "middleware",
+    "observable",
+    "reactive",
+    "browser",
+    "nodejs"
+  ],
+  "author": "Your Name <your.email@example.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kjkwan1/midder.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kjkwan1/midder/issues"
+  },
+  "homepage": "https://github.com/kjkwan1/midder#readme",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^24.1.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
+    "jest": "^29.7.0",
+    "rimraf": "^5.0.5",
+    "ts-jest": "^29.1.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
+  }
+}
