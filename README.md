@@ -5,7 +5,7 @@ My take on EventEmitter that works in both browser and Node, with some enhanceme
 ## Features
 
 - **Type-Safe**: Full TypeScript support with strongly typed events
-- **Middleware System**: Transform, filter, and tap into events with simple API
+- **Operation System**: Transform, filter, and tap into events with simple API
 - **Universal**: Works in both Node.js and browsers
 - **Targeted Emission**: Emit to specific listeners
 - **Promise Support**: Await on once(), because it's annoying to do otherwise
@@ -58,12 +58,12 @@ emitter.emit('userLogin', {
 });
 ```
 
-## Middleware System
+## Operation System
 
-Transform and process events with powerful middleware:
+Transform and process events with powerful operation:
 
 ```typescript
-emitter.middleware('userLogin')
+emitter.operation('userLogin')
   .transform((data) => ({ ...data, processed: true }))
   .filter((data) => {
     console.log(data.processed);  // Type safe transformation
@@ -115,12 +115,12 @@ const userData = await emitter.once('userLogin', { signal: controller.signal });
 - `once(event, options?)` - Promise-based single-use listener
 - `emit(event, data)` - Emit event to all listeners
 - `emitToListener(event, data, listenerId)` - Emit to specific listener
-- `middleware(event)` - Get middleware builder for event
+- `operation(event)` - Get operation builder for event
 - `listenerCount(event)` - Get number of listeners
 - `removeAllListeners(event?)` - Remove all listeners
 - `eventNames()` - Get list of events with listeners
 
-### Middleware Methods
+### Operation Methods
 
 - `transform(handler)` - Transform event data
 - `filter(predicate)` - Filter events conditionally

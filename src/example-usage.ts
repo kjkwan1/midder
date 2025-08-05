@@ -27,7 +27,7 @@ function idLog(id: string, text: string) {
 
 function resetEmitter(emitter: EventEmitter<any>) {
     emitter.removeAllListeners();
-    emitter.removeAllMiddleware();
+    emitter.removeAllOperations();
 }
 
 async function runTests() {
@@ -70,9 +70,9 @@ async function runTests() {
     resetEmitter(emitter);
     spacer();
 
-    title('Middleware example');
-    subtitle('Testing transform middleware');
-    emitter.middleware('dataUpdate')
+    title('Operation example');
+    subtitle('Testing transform operation');
+    emitter.operation('dataUpdate')
         .transform((data) => {
             emitterLog(`Transforming data: ${JSON.stringify(data)}`);
             return { ...data, value: data.value.toUpperCase() };
@@ -88,9 +88,9 @@ async function runTests() {
     resetEmitter(emitter);
     spacer();
 
-    subtitle('Testing filter middleware');
+    subtitle('Testing filter operation');
     let shouldFilter = false;
-    emitter.middleware('dataUpdate')
+    emitter.operation('dataUpdate')
         .filter(() => shouldFilter);
     emitter.on('dataUpdate', (data) => {
         emitterLog(`Data received: ${data.id} = ${data.value}`);

@@ -79,10 +79,10 @@ describe('EventEmitter - Once and Async', () => {
             expect(result).toBe(false);
         });
 
-        test('should apply middleware to targeted emission', () => {
+        test('should apply operation to targeted emission', () => {
             const listener = jest.fn();
 
-            emitter.middleware('test')
+            emitter.operation('test')
                 .transform((data: string) => data.toUpperCase());
 
             const id = emitter.on('test', listener);

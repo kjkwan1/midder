@@ -28,7 +28,7 @@
     "eventemitter",
     "events",
     "typescript",
-    "middleware",
+    "operations",
     "observable",
     "reactive",
     "browser",

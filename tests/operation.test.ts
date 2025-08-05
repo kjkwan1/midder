@@ -1,6 +1,6 @@
 import { EventEmitter } from '../src/model';
 
-describe('EventEmitter - Middleware', () => {
+describe('EventEmitter - Operations', () => {
     interface TestEvents {
         test: { value: number };
         string: string;
@@ -12,11 +12,11 @@ describe('EventEmitter - Middleware', () => {
         emitter = new EventEmitter<TestEvents>();
     });
 
-    describe('transform middleware', () => {
+    describe('transform operation', () => {
         test('should transform event data', () => {
             const listener = jest.fn();
 
-            emitter.middleware('test')
+            emitter.operation('test')
                 .transform((data) => ({ ...data, transformed: true }));
 
             emitter.on('test', listener);
@@ -28,7 +28,7 @@ describe('EventEmitter - Middleware', () => {
         test('should chain multiple transforms', () => {
             const listener = jest.fn();
 
-            emitter.middleware('test')
+            emitter.operation('test')
                 .transform((data) => ({ ...data, step1: true }))
                 .transform((data) => ({ ...data, step2: true }));
 
@@ -43,11 +43,11 @@ describe('EventEmitter - Middleware', () => {
         });
     });
 
-    describe('filter middleware', () => {
+    describe('filter operation', () => {
         test('should filter out events', () => {
             const listener = jest.fn();
 
-            emitter.middleware('test')
+            emitter.operation('test')
                 .filter((data) => data.value > 10);
 
             emitter.on('test', listener);
@@ -62,12 +62,12 @@ describe('EventEmitter - Middleware', () => {
         });
     });
 
-    describe('tap middleware', () => {
+    describe('tap operation', () => {
         test('should execute side effects without modifying data', () => {
             const listener = jest.fn();
             const tapHandler = jest.fn();
 
-            emitter.middleware('test')
+            emitter.operation('test')
                 .tap(tapHandler);
 
             emitter.on('test', listener);
@@ -78,30 +78,12 @@ describe('EventEmitter - Middleware', () => {
         });
     });
 
-    describe('log middleware', () => {
-        test('should log events', () => {
-            const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-            const listener = jest.fn();
-
-            emitter.middleware('test')
-                .log('Test event:');
-
-            emitter.on('test', listener);
-            emitter.emit('test', { value: 42 });
-
-            expect(consoleSpy).toHaveBeenCalledWith('Test event:', { value: 42 });
-            expect(listener).toHaveBeenCalledWith({ value: 42 });
-
-            consoleSpy.mockRestore();
-        });
-    });
-
-    describe('debounce middleware', () => {
+    describe('debounce operation', () => {
         test('should debounce event execution', () => {
             jest.useFakeTimers();
             const listener = jest.fn();
 
-            emitter.middleware('test')
+            emitter.operation('test')
                 .debounce(100);
 
             emitter.on('test', listener);
@@ -117,12 +99,12 @@ describe('EventEmitter - Middleware', () => {
         });
     });
 
-    describe('throttle middleware', () => {
+    describe('throttle operation', () => {
         test('should throttle event execution', () => {
             jest.useFakeTimers();
             const listener = jest.fn();
 
-            emitter.middleware('test')
+            emitter.operation('test')
                 .throttle(100);
 
             emitter.on('test', listener);
@@ -144,13 +126,13 @@ describe('EventEmitter - Middleware', () => {
         });
     });
 
-    describe('complex middleware chains', () => {
-        test('should execute middleware in correct order', () => {
+    describe('complex operation chains', () => {
+        test('should execute operation in correct order', () => {
             const listener = jest.fn();
             const tapHandler1 = jest.fn();
             const tapHandler2 = jest.fn();
 
-            emitter.middleware('test')
+            emitter.operation('test')
                 .tap(tapHandler1)
                 .transform((data) => ({ ...data, transformed: true }))
                 .filter((data) => data.value > 0)
@@ -168,7 +150,7 @@ describe('EventEmitter - Middleware', () => {
             const listener = jest.fn();
             const tapHandler = jest.fn();
 
-            emitter.middleware('test')
+            emitter.operation('test')
                 .filter((data) => data.value > 50)
                 .tap(tapHandler);
 
@@ -181,11 +163,11 @@ describe('EventEmitter - Middleware', () => {
         });
     });
 
-    describe('wildcard events with middleware', () => {
-        test('should apply middleware to wildcard listeners', () => {
+    describe('wildcard events with operation', () => {
+        test('should apply operation to wildcard listeners', () => {
             const wildcardListener = jest.fn();
 
-            emitter.middleware('test')
+            emitter.operation('test')
                 .transform((data) => ({ ...data, transformed: true }));
 
             emitter.on('*', wildcardListener);
@@ -200,7 +182,7 @@ describe('EventEmitter - Middleware', () => {
         test('should filter wildcard events', () => {
             const wildcardListener = jest.fn();
 
-            emitter.middleware('test')
+            emitter.operation('test')
                 .filter((data) => data.value > 50);
 
             emitter.on('*', wildcardListener);
@@ -211,14 +193,14 @@ describe('EventEmitter - Middleware', () => {
         });
     });
 
-    describe('middleware cleanup', () => {
-        test('removeAllMiddleware() should clear middleware', () => {
+    describe('operation cleanup', () => {
+        test('removeAllOperations() should clear operation', () => {
             const listener = jest.fn();
 
-            emitter.middleware('test')
+            emitter.operation('test')
                 .transform((data) => ({ ...data, transformed: true }));
 
-            emitter.removeAllMiddleware('test');
+            emitter.removeAllOperations('test');
 
             emitter.on('test', listener);
             emitter.emit('test', { value: 42 });

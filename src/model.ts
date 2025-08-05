@@ -1,4 +1,4 @@
-import { MiddlewareBuilder, MiddlewareChain } from "./middleware";
+import { OperationChainBuilder, OperationChain } from "./operation";
 import { EventMap, EventData } from "./types";
 
 type ListenerWithId<T> = { id: string; handler: (event: T) => void };
@@ -12,18 +12,18 @@ export class EventEmitter<Events extends EventMap = EventMap> {
     private maxListeners: number;
     private listeners = new Map<keyof Events, Set<ListenerWithId<any>>>();
     private wildcardListeners: ListenerWithId<any>[] = [];
-    private middlewareChains = new Map<keyof Events, MiddlewareChain<Events, any, any>>();
+    private operationChains = new Map<keyof Events, OperationChain<Events, any, any>>();
     private debounceTimers = new Map<keyof Events, NodeJS.Timeout>();
     private debounceDelays = new Map<keyof Events, number>();
     private throttleTimers = new Map<keyof Events, number>();
     private throttleDelays = new Map<keyof Events, number>();
     private idCounter = 0;
 
-    constructor({ maxListeners = 10 }: EventEmitterOptions = {}) {
-        if (maxListeners < 0) {
+    constructor(config: EventEmitterOptions = { maxListeners: 10 }) {
+        if (config.maxListeners && config.maxListeners < 0) {
             throw new Error('maxListeners cannot be negative');
         }
-        this.maxListeners = maxListeners;
+        this.maxListeners = config.maxListeners || 10;
     }
 
     /**
@@ -83,7 +83,7 @@ export class EventEmitter<Events extends EventMap = EventMap> {
     /**
      * Promise based event listener that resolves with the result of one event emission with automatic cleanup.
      */
-    once<K extends keyof Events>(event: K, { timeout, signal }: { timeout?: number, signal?: AbortSignal } = {}): Promise<EventData<Events, K>> {
+    once<K extends keyof Events>(event: K & string, { timeout, signal }: { timeout?: number, signal?: AbortSignal } = {}): Promise<EventData<Events, K>> {
         return new Promise((resolve, reject) => {
             let id: string;
             let timeoutId: NodeJS.Timeout | number | undefined;
@@ -121,16 +121,8 @@ export class EventEmitter<Events extends EventMap = EventMap> {
     /**
      * Unsubscribe from an event or wildcard listeners
      */
-    off<K extends '*'>(
-        event: K,
-        idOrHandler: string | ((event: EventData<Events, K>) => void)
-    ): boolean;
-    off<K extends keyof Events>(
-        event: K,
-        idOrHandler: string | ((event: EventData<Events, K>) => void)
-    ): boolean;
-    off<K extends string>(
-        event: K,
+off<K extends string>(
+        event: K | '*',
         idOrHandler: string | ((event: EventData<Events, K>) => void)
     ): boolean {
         if (event === '*') {
@@ -161,9 +153,9 @@ export class EventEmitter<Events extends EventMap = EventMap> {
     /**
      * Apply transformation, filtering, and tap handlers to specific events.
      */
-    middleware<K extends keyof Events>(event: K): MiddlewareBuilder<Events, K, EventData<Events, K>> {
-        const existingChain = this.middlewareChains.get(event) || new MiddlewareChain<Events, K>(event);
-        return new MiddlewareBuilder(this, event, existingChain);
+    operation<K extends keyof Events>(event: K): OperationChainBuilder<Events, K, EventData<Events, K>> {
+        const existingChain = this.operationChains.get(event) || new OperationChain<Events, K>(event);
+        return new OperationChainBuilder(this, event, existingChain);
     }
 
     emit<K extends keyof Events>(event: K, data: EventData<Events, K>): boolean {
@@ -200,7 +192,7 @@ export class EventEmitter<Events extends EventMap = EventMap> {
     private _emitInternal<K extends keyof Events>(event: K, data: EventData<Events, K>): boolean {
         let called = false;
         const listeners = this.listeners.get(event);
-        const chain = this.middlewareChains.get(event);
+        const chain = this.operationChains.get(event);
         if (!listeners && this.wildcardListeners.length === 0) {
             return false;
         }
@@ -239,7 +231,7 @@ export class EventEmitter<Events extends EventMap = EventMap> {
     }
 
     /**
-     * Emit an event to a specific listener by ID, applying middleware if available.
+     * Emit an event to a specific listener by ID, applying operations if available.
      * Returns true if the listener was called, false otherwise.
      */
     emitToListener<K extends keyof Events>(event: K, data: EventData<Events, K>, listenerId: string): boolean {
@@ -253,7 +245,7 @@ export class EventEmitter<Events extends EventMap = EventMap> {
             return false;
         }
 
-        const chain = this.middlewareChains.get(event);
+        const chain = this.operationChains.get(event);
         const processedData = chain ? chain.execute(data) : data;
 
         if (processedData === undefined) {
@@ -296,9 +288,9 @@ export class EventEmitter<Events extends EventMap = EventMap> {
         }
     }
 
-    removeAllMiddleware<K extends keyof Events>(event?: K): void {
+    removeAllOperations<K extends keyof Events>(event?: K): void {
         if (event) {
-            this.middlewareChains.delete(event);
+            this.operationChains.delete(event);
             this.debounceDelays.delete(event);
             this.throttleDelays.delete(event);
             const timer = this.debounceTimers.get(event);
@@ -308,7 +300,7 @@ export class EventEmitter<Events extends EventMap = EventMap> {
             }
             this.throttleTimers.delete(event);
         } else {
-            this.middlewareChains.clear();
+            this.operationChains.clear();
             this.debounceDelays.clear();
             this.throttleDelays.clear();
             for (const timer of this.debounceTimers.values()) {
@@ -339,8 +331,8 @@ export class EventEmitter<Events extends EventMap = EventMap> {
         this.throttleTimers.delete(event);
     }
 
-    getMiddleware<K extends keyof Events>(event: K): MiddlewareChain<Events, K, any> | undefined {
-        return this.middlewareChains.get(event);
+    getOperation<K extends keyof Events>(event: K): OperationChain<Events, K, any> | undefined {
+        return this.operationChains.get(event);
     }
 
     getMaxListeners(): number {
@@ -355,17 +347,17 @@ export class EventEmitter<Events extends EventMap = EventMap> {
         return this;
     }
 
-    /** @internal - Used by middleware system, not intended for direct use */
-    _setMiddleware<K extends keyof Events>(event: K, chain: MiddlewareChain<Events, K, any>): void {
-        this.middlewareChains.set(event, chain);
+    /** @internal - Used by operation chain system, not intended for direct use */
+    _setOperation<K extends keyof Events>(event: K, chain: OperationChain<Events, K, any>): void {
+        this.operationChains.set(event, chain);
     }
 
-    /** @internal - Used by middleware system, not intended for direct use */
+    /** @internal - Used by operation chain system, not intended for direct use */
     _setDebounce<K extends keyof Events>(event: K, delayMs: number): void {
         this.debounceDelays.set(event, delayMs);
     }
 
-    /** @internal - Used by middleware system, not intended for direct use */
+    /** @internal - Used by operation chain system, not intended for direct use */
     _setThrottle<K extends keyof Events>(event: K, delayMs: number): void {
         this.throttleDelays.set(event, delayMs);
     }

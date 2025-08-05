@@ -22,10 +22,10 @@ describe('EventEmitter - Edge Cases', () => {
             expect(listener).toHaveBeenCalledWith('');
         });
 
-        test('should handle null/undefined in middleware', () => {
+        test('should handle null/undefined in operation', () => {
             const listener = jest.fn();
 
-            emitter.middleware('test')
+            emitter.operation('test')
                 .transform((data) => {
                     if (data === 'null') return null as any;
                     return data;
@@ -37,13 +37,13 @@ describe('EventEmitter - Edge Cases', () => {
             expect(listener).toHaveBeenCalledWith(null);
         });
 
-        test('should handle middleware errors gracefully', () => {
+        test('should handle operation errors gracefully', () => {
             const listener = jest.fn();
-            const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+            const consoleErrorSpy = jest.spyOn(console, 'error', undefined as any).mockImplementation();
 
-            emitter.middleware('test')
+            emitter.operation('test')
                 .transform(() => {
-                    throw new Error('Middleware error');
+                    throw new Error('Operation error');
                 });
 
             emitter.on('test', listener);
@@ -84,9 +84,9 @@ describe('EventEmitter - Edge Cases', () => {
             expect(listener2).toHaveBeenCalledTimes(1);
         });
 
-        test('should handle very long middleware chains', () => {
+        test('should handle very long operation chains', () => {
             const listener = jest.fn();
-            let chain = emitter.middleware('numbers');
+            let chain = emitter.operation('numbers');
 
             for (let i = 0; i < 100; i++) {
                 chain = chain.transform((n: number) => n + 1);
@@ -151,10 +151,10 @@ describe('EventEmitter - Edge Cases', () => {
             expect(listener).not.toHaveBeenCalled();
         });
 
-        test('should handle deep object modifications in middleware', () => {
+        test('should handle deep object modifications in operation', () => {
             const listener = jest.fn();
 
-            emitter.middleware('objects')
+            emitter.operation('objects')
                 .transform((data) => {
                     return JSON.parse(JSON.stringify(data));
                 })
