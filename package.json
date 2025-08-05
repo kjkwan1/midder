@@ -1,6 +1,6 @@
 {
   "name": "midder",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "My take on Event Emitters based on pain points I found with the base implementation in Node.js and the browser.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
